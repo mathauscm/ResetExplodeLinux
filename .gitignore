@@ -1,23 +1,6 @@
-# Build
-bin/
-obj/
-publish/
-ResetExplode-dist/
-*.exe
-*.dll
-*.pdb
-
-# IDE
-.vs/
-.vscode/
-*.user
-*.suo
-
-# Local
-*.log
-
-# Drivers seriais embutidos (RESET MAKER): as DLLs fazem parte dos pacotes assinados
-!Drivers/**
+# build do cargo
+target/
+app/src-tauri/gen/
 
 # worktrees temporárias do Claude Code
 .claude/worktrees/
