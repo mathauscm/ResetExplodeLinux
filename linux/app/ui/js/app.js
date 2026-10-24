@@ -1,7 +1,7 @@
 // Navegação, tema e o resumo da barra lateral. Cada página é um módulo em ./pages com
 // `render(el)` (monta) e, se precisar, devolve uma função de limpeza (para timers).
 
-import { snapshot, fmtTemp, fmtPct, bytes } from "./lib.js";
+import { invoke, snapshot, fmtTemp, fmtPct, bytes } from "./lib.js";
 import * as dash from "./pages/dash.js";
 import * as system from "./pages/system.js";
 import * as sensors from "./pages/sensors.js";
@@ -149,6 +149,8 @@ const miniCpu = document.getElementById("miniCpu");
 const miniGpu = document.getElementById("miniGpu");
 const miniRam = document.getElementById("miniRam");
 async function mini() {
+  // testes de GPU e disco pausam os sensores (como no Windows): consultar o driver no meio atrapalha a medição
+  if (document.documentElement.dataset.sensorsPaused) return;
   try {
     const { summary: s } = await snapshot();
     miniCpu.textContent = `${fmtTemp(s.cpu_temp_c)} · ${fmtPct(s.cpu_load_pct)}`;
@@ -173,3 +175,26 @@ applyTheme(store("theme") === "light");
 go(store("page") ?? "dash");
 mini();
 setInterval(mini, 2000);
+
+// ---------------- teste de fumaça (RESET_SMOKE=1) ----------------
+async function smoke() {
+  const errors = [];
+  const where = () => document.querySelector(".nav-item.active")?.dataset.id ?? "?";
+  window.addEventListener("error", (e) => errors.push(`[${where()}] erro: ${e.message} (${e.filename?.split("/").pop()}:${e.lineno})`));
+  window.addEventListener("unhandledrejection", (e) => errors.push(`[${where()}] promessa rejeitada: ${e.reason}`));
+  const orig = console.error;
+  console.error = (...a) => {
+    errors.push(`[${where()}] console.error: ${a.map(String).join(" ")}`);
+    orig(...a);
+  };
+  const lines = [];
+  for (const item of NAV.flatMap((g) => g.items)) {
+    go(item.id);
+    await new Promise((r) => setTimeout(r, 5000));
+    const text = pageEl.innerText.replace(/\s+/g, " ").trim();
+    lines.push(`ok ${item.id}: ${text.length} caracteres · ${text.slice(0, 90)}`);
+  }
+  go("dash");
+  await invoke("smoke_report", { lines: [...lines, `ERROS: ${errors.length}`, ...errors] });
+}
+invoke("smoke_enabled").then((on) => on && smoke());

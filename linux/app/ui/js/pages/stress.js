@@ -4,7 +4,7 @@
 import { call, head, esc, num, every } from "../lib.js";
 
 // Escolhas do formulário entre visitas (quando não há teste rodando).
-const form = { cpu: true, ram: false, ram_fraction: 0.6, gpu: false, cpu_limit: 90, gpu_limit: 85, minutes: 10, gpu_res: "1920x1080", gpu_msaa: 4, gpu_intensity: "alta" };
+const form = { cpu: true, ram: false, ram_fraction: 0.6, gpu: false, cpu_limit: 95, gpu_limit: 85, minutes: 10, gpu_res: "1920x1080", gpu_msaa: 4, gpu_intensity: "alta" };
 
 const chips = (id, items, on) =>
   `<div class="chips" id="${id}">${items.map(([v, t]) => `<button class="chip${String(v) === String(on) ? " on" : ""}" data-v="${v}" type="button">${t}</button>`).join("")}</div>`;

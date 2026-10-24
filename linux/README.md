@@ -56,20 +56,27 @@ Ao parar (ou fechar o app), cada dispositivo volta ao modo que tinha antes.
 
 ## Situação
 
-| Tela | Estado |
+Todas as telas do app do Windows têm a versão Linux:
+
+| Grupo | Telas |
 |---|---|
-| Visão geral, Sistema, Sensores, Placa de vídeo, Discos | feito |
-| Iluminação RGB (OpenRGB) | feito e testado no hardware (placa MSI + memória Kingston Fury) |
-| Drivers e atualizações (pacman + pkexec) | feito |
-| Apps: instalados, remover, catálogo para instalar | feito |
-| Energia, Rede | a fazer |
-| Biblioteca, FPS estimado, Gargalo, Overlay (MangoHud) | a fazer |
-| Benchmark (CPU: port direto; GPU: Vulkan), Stress, Overclock | a fazer |
-| Otimização, Inicialização | a fazer (equivalentes Linux) |
-| Portas seriais, Drivers seriais | a fazer (udev, grupo `uucp`) |
+| RESET EXPLODE | Visão geral, Sistema, Sensores, Placa de vídeo, Discos, Energia, Rede |
+| RESET JOGOS | Biblioteca (Steam, Heroic, Lutris), FPS estimado, Gargalo, Overlay (MangoHud) |
+| RESET DESEMPENHO | Benchmark (render, simulação, memória, disco, cena e ray tracing na GPU), Stress test, Overclock |
+| RESET FERRAMENTAS | Iluminação RGB (OpenRGB), Otimização, Inicialização, Apps, Drivers e atualizações |
+| RESET MAKER | Portas seriais (com monitor serial), Drivers seriais |
+
+O que muda em relação ao Windows: o FPS dos jogos vem do MangoHud (não dá para ler de fora como o ETW faz);
+as notas de CPU não são comparáveis 1:1 com as do Windows (a imagem e a conta são idênticas, mas o código em
+Rust é mais rápido que o .NET no mesmo PC); as notas de GPU vêm de cenas equivalentes em Vulkan.
 
 Ainda não tem: sensores da placa-mãe MSI (o chip NCT6687 precisa do módulo `nct6687d`, no AUR), GPUs AMD/Intel
-e detalhes por pente de memória (exigem root).
+na ficha técnica e detalhes por pente de memória (exigem root).
+
+### Teste de fumaça
+
+`RESET_SMOKE=1 target/debug/reset-explode` abre o app de verdade, passa por todas as telas (5 s cada), imprime
+quanto conteúdo cada uma mostrou e os erros de JavaScript que aparecerem, e fecha.
 
 ## Como uma tela nova é ligada
 

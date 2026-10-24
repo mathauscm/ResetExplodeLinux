@@ -132,6 +132,22 @@ fn pkg_run(app: AppHandle, action: PkgAction) -> Result<(), String> {
     jobs::spawn(&app, true, packages::PACMAN, &args)
 }
 
+/// Teste de fumaça (`RESET_SMOKE=1`): a interface passa por todas as telas sozinha e manda os erros
+/// de JavaScript que aparecerem; o app imprime o relatório e fecha. Pega o que o teste no navegador com
+/// backend falso não pega: o Tauri e o backend de verdade.
+#[tauri::command]
+fn smoke_enabled() -> bool {
+    std::env::var_os("RESET_SMOKE").is_some()
+}
+
+#[tauri::command]
+fn smoke_report(app: AppHandle, lines: Vec<String>) {
+    for l in &lines {
+        println!("{l}");
+    }
+    app.exit(0);
+}
+
 /// Modo sem janela usado pelo login (`--apply-lights`): conecta, reaplica o efeito salvo e sai. Efeitos
 /// animados (arco-íris, temperatura...) precisam continuar calculando, então nesse caso fica rodando.
 fn apply_lights_headless() {
@@ -206,6 +222,8 @@ fn main() {
             apps_catalog,
             pkg_run,
             areas::area_call,
+            smoke_enabled,
+            smoke_report,
         ])
         // ao fechar, os LEDs ficam como estão: as cores escolhidas valem até o próximo desligamento
         // (e voltam no login, se a opção estiver ligada)

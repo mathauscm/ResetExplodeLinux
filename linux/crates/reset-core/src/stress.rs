@@ -281,7 +281,9 @@ impl Default for Config {
             cpu: true,
             ram: false,
             ram_fraction: 0.6,
-            cpu_limit: 90.0,
+            // Ryzen 5000/7000 trabalham em 90 °C (Tjmax) por projeto sob carga total; Intel vai até 100.
+            // Com 90 (o padrão do Windows) o teste pararia logo no começo num Ryzen.
+            cpu_limit: 95.0,
             gpu: false,
             gpu_limit: 85.0,
             minutes: 10.0,
