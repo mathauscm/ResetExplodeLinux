@@ -1,0 +1,120 @@
+#version 460
+// Path tracer com raios inline (VK_KHR_ray_query) num compute shader: port do HLSL do GpuRtBench.cs (DXR 1.1).
+// Por pixel e amostra: raio de visibilidade, sombra suave do sol, oclusão de ambiente e rebatidas de reflexo
+// (metal/espelho) ou iluminação indireta (fosco). Luzes emissivas somam direto.
+#extension GL_EXT_ray_query : require
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(std140, set = 0, binding = 0) uniform Frame {
+    mat4 invViewProj;
+    vec4 camTime;   // xyz = câmera, w = tempo
+    vec4 sunDir;    // xyz = direção em que a luz do sol viaja
+    uvec4 p;        // x = índice do frame, y = largura, z = altura, w = amostras por pixel
+    uvec4 p2;       // x = rebatidas
+} F;
+
+layout(set = 0, binding = 1) uniform accelerationStructureEXT scene;
+// Vértice = 2 vec4: posição e normal.
+layout(std430, set = 0, binding = 2) readonly buffer Verts { vec4 verts[]; };
+layout(std430, set = 0, binding = 3) readonly buffer Indices { uint indices[]; };
+// Malha: x = primeiro índice, y = primeiro vértice.
+layout(std430, set = 0, binding = 4) readonly buffer Meshes { uvec4 meshes[]; };
+struct Inst { vec3 albedo; float metal; float rough; float emissive; uint mesh; float pad; };
+layout(std430, set = 0, binding = 5) readonly buffer Insts { Inst insts[]; };
+layout(set = 0, binding = 6, rgba8) uniform writeonly image2D outImg;
+
+uint pcg(inout uint s) {
+    s = s * 747796405u + 2891336453u;
+    uint w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u;
+    return (w >> 22u) ^ w;
+}
+float rnd(inout uint s) { return float(pcg(s) & 0xFFFFFFu) / 16777216.0; }
+
+vec3 cosineDir(vec3 n, inout uint s) {
+    float u = rnd(s), v = rnd(s), r = sqrt(u), phi = 6.2831853 * v;
+    vec3 t = abs(n.y) < 0.99 ? normalize(cross(n, vec3(0.0, 1.0, 0.0))) : vec3(1.0, 0.0, 0.0);
+    vec3 b = cross(n, t);
+    return normalize(t * (r * cos(phi)) + b * (r * sin(phi)) + n * sqrt(max(0.0, 1.0 - u)));
+}
+
+vec3 sky(vec3 d) {
+    vec3 s = mix(vec3(0.85, 0.9, 1.0), vec3(0.25, 0.45, 0.85), clamp(d.y, 0.0, 1.0));
+    float sun = pow(clamp(dot(d, -F.sunDir.xyz), 0.0, 1.0), 900.0) * 60.0;
+    return s * 0.8 + sun * vec3(1.0, 0.92, 0.8);
+}
+
+struct Hit { vec3 pos; vec3 nrm; Inst mat; };
+
+bool closest(vec3 o, vec3 d, out Hit h) {
+    rayQueryEXT q;
+    rayQueryInitializeEXT(q, scene, gl_RayFlagsOpaqueEXT, 0xFF, o, 0.002, d, 2000.0);
+    while (rayQueryProceedEXT(q)) {}
+    h.pos = vec3(0.0); h.nrm = vec3(0.0, 1.0, 0.0); h.mat = insts[0];
+    if (rayQueryGetIntersectionTypeEXT(q, true) != gl_RayQueryCommittedIntersectionTriangleEXT) return false;
+    Inst m = insts[rayQueryGetIntersectionInstanceCustomIndexEXT(q, true)];
+    uvec4 me = meshes[m.mesh];
+    uint i0 = me.x + uint(rayQueryGetIntersectionPrimitiveIndexEXT(q, true)) * 3u;
+    vec2 bc = rayQueryGetIntersectionBarycentricsEXT(q, true);
+    vec3 n0 = verts[(me.y + indices[i0]) * 2u + 1u].xyz;
+    vec3 n1 = verts[(me.y + indices[i0 + 1u]) * 2u + 1u].xyz;
+    vec3 n2 = verts[(me.y + indices[i0 + 2u]) * 2u + 1u].xyz;
+    vec3 n = n0 * (1.0 - bc.x - bc.y) + n1 * bc.x + n2 * bc.y;
+    mat4x3 o2w = rayQueryGetIntersectionObjectToWorldEXT(q, true);
+    n = normalize(mat3(o2w) * n);
+    if (dot(n, d) > 0.0) n = -n;
+    h.pos = o + d * rayQueryGetIntersectionTEXT(q, true) + n * 0.003;
+    h.nrm = n;
+    h.mat = m;
+    return true;
+}
+
+bool occluded(vec3 o, vec3 d, float tmax) {
+    rayQueryEXT q;
+    rayQueryInitializeEXT(q, scene, gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT, 0xFF, o, 0.002, d, tmax);
+    while (rayQueryProceedEXT(q)) {}
+    return rayQueryGetIntersectionTypeEXT(q, true) != gl_RayQueryCommittedIntersectionNoneEXT;
+}
+
+void main() {
+    uvec2 id = gl_GlobalInvocationID.xy;
+    uint width = F.p.y, height = F.p.z, spp = F.p.w, bounces = F.p2.x;
+    if (id.x >= width || id.y >= height) return;
+    uint seed = (id.y * width + id.x) * 9781u + F.p.x * 6271u;
+    vec3 color = vec3(0.0);
+    for (uint s = 0u; s < spp; s++) {
+        vec2 uv = (vec2(id) + vec2(rnd(seed), rnd(seed))) / vec2(width, height);
+        vec4 p = F.invViewProj * vec4(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, 1.0, 1.0);
+        vec3 o = F.camTime.xyz, d = normalize(p.xyz / p.w - F.camTime.xyz);
+        vec3 through = vec3(1.0), acc = vec3(0.0);
+        for (uint b = 0u; b < bounces; b++) {
+            Hit h;
+            if (!closest(o, d, h)) { acc += through * sky(d); break; }
+            acc += through * h.mat.albedo * h.mat.emissive;
+            // Sombra suave do sol (direção sorteada num cone) + oclusão de ambiente (um raio no hemisfério).
+            vec3 sd = normalize(-F.sunDir.xyz + (vec3(rnd(seed), rnd(seed), rnd(seed)) - 0.5) * 0.06);
+            float ndl = clamp(dot(h.nrm, sd), 0.0, 1.0);
+            float sunVis = ndl > 0.0 && !occluded(h.pos, sd, 1000.0) ? 1.0 : 0.0;
+            vec3 ad = cosineDir(h.nrm, seed);
+            float ao = occluded(h.pos, ad, 6.0) ? 0.15 : 1.0;
+            vec3 diffuse = h.mat.albedo * (1.0 - h.mat.metal);
+            acc += through * diffuse * (ndl * sunVis * vec3(3.6, 3.3, 2.9) + ao * vec3(0.12, 0.15, 0.2));
+            // Próxima rebatida: reflexo (metal) ou iluminação indireta (fosco).
+            if (h.mat.metal > 0.5) {
+                vec3 rd = reflect(d, h.nrm);
+                d = normalize(rd + (cosineDir(h.nrm, seed) - h.nrm) * h.mat.rough);
+                through *= h.mat.albedo;
+            } else {
+                d = cosineDir(h.nrm, seed);
+                through *= h.mat.albedo * 0.8;
+            }
+            o = h.pos;
+            if (max(through.x, max(through.y, through.z)) < 0.02) break;
+        }
+        color += acc;
+    }
+    color /= float(spp);
+    color = color / (1.0 + color);                        // tone mapping (Reinhard)
+    color = pow(clamp(color, 0.0, 1.0), vec3(1.0 / 2.2)); // gama
+    imageStore(outImg, ivec2(id), vec4(color, 1.0));
+}
