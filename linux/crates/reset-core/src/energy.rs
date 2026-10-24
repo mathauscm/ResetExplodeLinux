@@ -5,15 +5,11 @@
 
 use crate::gpu;
 use crate::util::{read_trim, read_u64};
-use nvml_wrapper::enum_wrappers::device::Sampling;
-use nvml_wrapper::enums::device::SampleValue;
-use nvml_wrapper::Nvml;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
-use std::sync::OnceLock;
 use std::time::Instant;
 
 const POWER_SUPPLY: &str = "/sys/class/power_supply";
@@ -538,41 +534,13 @@ pub struct GpuPower {
     pub load_pct: Option<f32>,
 }
 
-static NVML: OnceLock<Option<Nvml>> = OnceLock::new();
-
-/// Média das amostras de consumo que o driver guarda. Placas que não respondem à leitura instantânea
-/// (`nvidia-smi` mostra "N/A") às vezes têm o buffer de amostras preenchido.
-fn sampled_power_w(index: u32) -> Option<f32> {
-    let nv = NVML.get_or_init(|| Nvml::init().ok()).as_ref()?;
-    let samples = nv.device_by_index(index).ok()?.samples(Sampling::Power, None).ok()?;
-    // só os últimos ~2 s (timestamps em µs)
-    let last = samples.iter().map(|s| s.timestamp).max()?;
-    let v: Vec<f64> = samples
-        .iter()
-        .filter(|s| last - s.timestamp <= 2_000_000)
-        .map(|s| match s.value {
-            SampleValue::U32(v) => v as f64,
-            SampleValue::U64(v) => v as f64,
-            SampleValue::F64(v) => v,
-            SampleValue::I64(v) => v as f64,
-        })
-        .filter(|v| *v > 0.0)
-        .collect();
-    (!v.is_empty()).then(|| (v.iter().sum::<f64>() / v.len() as f64 / 1000.0) as f32)
-}
-
 pub fn gpu_power() -> Vec<GpuPower> {
     gpu::list()
         .into_iter()
         .map(|g| {
             let l = gpu::live(g.index).unwrap_or_default();
-            let (power_w, power_from) = match l.power_w {
-                Some(w) => (Some(w), Some("sensor")),
-                None => match sampled_power_w(g.index) {
-                    Some(w) => (Some(w), Some("amostras")),
-                    None => (None, None),
-                },
-            };
+            let power_w = l.power_w;
+            let power_from = power_w.map(|_| if l.power_sampled { "amostras" } else { "sensor" });
             GpuPower {
                 index: g.index,
                 name: g.name,

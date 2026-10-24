@@ -2,7 +2,9 @@
 //! sem driver NVIDIA o app continua funcionando, só sem esta parte. AMD/Intel entram depois pelo sysfs do amdgpu/xe.
 
 use nvml_wrapper::bitmasks::device::ThrottleReasons;
-use nvml_wrapper::enum_wrappers::device::{Clock, PerformanceState, TemperatureSensor};
+use nvml_wrapper::enum_wrappers::device::{Clock, PerformanceState, Sampling, TemperatureSensor};
+use nvml_wrapper::enums::device::SampleValue;
+use nvml_wrapper::Device;
 use nvml_wrapper::Nvml;
 use serde::Serialize;
 use std::sync::OnceLock;
@@ -50,6 +52,9 @@ pub struct GpuLive {
     pub core_mhz: Option<f32>,
     pub mem_mhz: Option<f32>,
     pub power_w: Option<f32>,
+    /// O consumo veio da média das amostras do driver, não da leitura instantânea (que algumas placas,
+    /// como esta RTX 4060, não dão: o `nvidia-smi` mostra "N/A").
+    pub power_sampled: bool,
     pub power_limit_w: Option<f32>,
     pub fan_pct: Option<f32>,
     pub vram_used: Option<u64>,
@@ -122,13 +127,18 @@ pub fn live(index: u32) -> Option<GpuLive> {
     let mem = d.memory_info().ok();
     let util = d.utilization_rates().ok();
     let fan = d.fan_speed(0).ok();
+    let (power_w, power_sampled) = match d.power_usage() {
+        Ok(v) => (Some(mw(v)), false),
+        Err(_) => (sampled_power_w(&d), true),
+    };
     Some(GpuLive {
         temp_c: d.temperature(TemperatureSensor::Gpu).ok().map(|v| v as f32),
         load_pct: util.as_ref().map(|u| u.gpu as f32),
         mem_ctrl_pct: util.as_ref().map(|u| u.memory as f32),
         core_mhz: d.clock_info(Clock::Graphics).ok().map(|v| v as f32),
         mem_mhz: d.clock_info(Clock::Memory).ok().map(|v| v as f32),
-        power_w: d.power_usage().ok().map(mw),
+        power_w,
+        power_sampled: power_sampled && power_w.is_some(),
         power_limit_w: d.enforced_power_limit().ok().map(mw),
         fan_pct: fan.map(|v| v as f32),
         vram_used: mem.as_ref().map(|m| m.used),
@@ -138,6 +148,24 @@ pub fn live(index: u32) -> Option<GpuLive> {
         pstate: d.performance_state().ok().and_then(pstate),
         perfcap: d.current_throttle_reasons().map(perfcap).unwrap_or_default(),
     })
+}
+
+/// Média das amostras de consumo dos últimos ~2 s que o driver guarda (timestamps em µs).
+fn sampled_power_w(d: &Device) -> Option<f32> {
+    let samples = d.samples(Sampling::Power, None).ok()?;
+    let last = samples.iter().map(|s| s.timestamp).max()?;
+    let v: Vec<f64> = samples
+        .iter()
+        .filter(|s| last - s.timestamp <= 2_000_000)
+        .map(|s| match s.value {
+            SampleValue::U32(v) => v as f64,
+            SampleValue::U64(v) => v as f64,
+            SampleValue::F64(v) => v,
+            SampleValue::I64(v) => v as f64,
+        })
+        .filter(|v| *v > 0.0)
+        .collect();
+    (!v.is_empty()).then(|| (v.iter().sum::<f64>() / v.len() as f64 / 1000.0) as f32)
 }
 
 fn mw(v: u32) -> f32 {

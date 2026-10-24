@@ -18,3 +18,6 @@ ResetExplode-dist/
 
 # Drivers seriais embutidos (RESET MAKER): as DLLs fazem parte dos pacotes assinados
 !Drivers/**
+
+# worktrees temporárias do Claude Code
+.claude/worktrees/

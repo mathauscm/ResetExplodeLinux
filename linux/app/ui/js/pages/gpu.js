@@ -49,7 +49,7 @@ export async function render(el) {
       ["Controlador de memória", fmtPct(l.mem_ctrl_pct)],
       ["Clock do núcleo", fmtMhz(l.core_mhz)],
       ["Clock da memória", fmtMhz(l.mem_mhz)],
-      ["Consumo", l.power_w == null ? "não informado por esta placa" : `${fmtW(l.power_w)} de ${fmtW(l.power_limit_w)}`],
+      ["Consumo", l.power_w == null ? "não informado por esta placa" : `${fmtW(l.power_w)} de ${fmtW(l.power_limit_w)}${l.power_sampled ? " (média das amostras do driver)" : ""}`],
       ["Ventoinha", fmtPct(l.fan_pct)],
       ["VRAM", l.vram_used == null ? null : `${bytes(l.vram_used)} de ${bytes(l.vram_total, 0)}`],
       ["NVENC / NVDEC", `${fmtPct(l.encoder_pct)} / ${fmtPct(l.decoder_pct)}`],
