@@ -111,3 +111,17 @@ reset-gpu burn  --width 1920 --height 1080 --msaa 0|4|8 --intensity normal|alta|
 | `{"type":"error","message":"…"}` | erro (código de saída ≠ 0) |
 
 ESC ou fechar a janela encerra (`"stopped":"usuario"`). Nota: `scene` = FPS médio × 10; `rt` = amostras/s ÷ 10.000.
+
+Detalhes da implementação (ash + winit, GLSL compilado pelo `glslc` no `build.rs`, que precisa do pacote `shaderc`):
+- ESC, fechar a janela, SIGINT ou SIGTERM encerram e ainda escrevem o `result` (o app cancela com SIGTERM).
+- `rt --seconds` é o tempo total: aquecimento de 1/4 (entre 2 e 20 s) + 3 passadas iguais, nota pela mediana.
+  O `progress` traz `"phase"` (`aquecendo`, `passada N de 3`).
+- `burn` tem `"score": null` (o contrato só dá nota para `scene` e `rt`). MSAA que a placa não aceita desce sozinho.
+- Campos extras opcionais no `result`: todos têm `width`, `height`, `max_temp_c`; `rt` tem `preset`, `spp`,
+  `bounces`, `passes`, `variation_pct`, `reliable`, `samples_per_sec`, `gigarays`; `burn` tem `msaa`, `intensity`,
+  `temp_c`, `temp_limit`. O `info` também traz `api` e `vram`.
+- Padrões: 1920x1080; 30 s em `scene`/`rt` e 600 s no `burn`; preset e intensidade `alta`; MSAA 4; limite de 85 °C.
+
+O Overclock aplica os ajustes rodando o próprio app com root: `pkexec reset-explode --nvml-apply --gpu N
+--power-mw … --core-offset … --mem-offset … --clock-cap N|none`. Nesse modo ele recusa rodar sem root e valida
+tudo de novo contra os limites lidos na hora.
