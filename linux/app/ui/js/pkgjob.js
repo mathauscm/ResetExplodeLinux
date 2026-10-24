@@ -1,35 +1,34 @@
-// Executa uma ação do pacman (atualizar, instalar, remover) com a janela de senha do sistema e mostra a saída
-// ao vivo num painel. Usado pelas telas de Drivers e de Apps.
+// Executa uma tarefa longa (pacman, ajustes de sistema...) e mostra a saída ao vivo num painel. Tarefas com
+// root pedem a senha pela janela do sistema. Usado pelas telas de Drivers, Apps, Otimização, Overclock...
 
-import { invoke, esc } from "./lib.js";
-
-const listen = (ev, cb) => window.__TAURI__.event.listen(ev, cb);
+import { invoke, esc, listen } from "./lib.js";
 
 /**
- * Roda `action` ({kind: "upgrade"|"install"|"remove", ...}) e escreve o andamento em `panel`.
- * Resolve com {ok, message} quando o pacman termina (ou quando nem chega a começar).
+ * `start` é uma ação do pacman ({kind: "upgrade"|"install"|"remove", ...}) ou uma função que inicia a
+ * tarefa no backend (ex.: `() => call("tools", "apply", {...})`, que por baixo usa `jobs::spawn`).
+ * Escreve o andamento em `panel` e resolve com {ok, message} quando a tarefa termina.
  */
-export async function runJob(action, panel, title) {
+export async function runJob(start, panel, title) {
   panel.hidden = false;
-  panel.innerHTML = `<div class="row"><b>${esc(title)}</b><span class="spacer"></span><span class="tag" data-state>aguardando a senha…</span></div>
-    <pre class="log" data-log></pre><div class="status" data-msg>Confirme a senha de administrador na janela do sistema.</div>`;
+  panel.innerHTML = `<div class="row"><b>${esc(title)}</b><span class="spacer"></span><span class="tag" data-state>começando…</span></div>
+    <pre class="log" data-log></pre><div class="status" data-msg>Se pedir, confirme a senha de administrador na janela do sistema.</div>`;
   const log = panel.querySelector("[data-log]");
   const state = panel.querySelector("[data-state]");
   const msg = panel.querySelector("[data-msg]");
 
-  // os ouvintes entram antes de o trabalho começar, senão as primeiras linhas se perdem
+  // os ouvintes entram antes de a tarefa começar, senão as primeiras linhas se perdem
   let done;
   const finished = new Promise((resolve) => (done = resolve));
-  const unLog = await listen("pkg-log", (e) => {
+  const unLog = await listen("job-log", (line) => {
     state.textContent = "em andamento";
     msg.textContent = "Não desligue o PC enquanto isso roda.";
-    log.textContent += e.payload + "\n";
+    log.textContent += line + "\n";
     log.scrollTop = log.scrollHeight;
   });
-  const unDone = await listen("pkg-done", (e) => done(e.payload));
+  const unDone = await listen("job-done", (r) => done(r));
 
   try {
-    await invoke("pkg_run", { action });
+    await (typeof start === "function" ? start() : invoke("pkg_run", { action: start }));
   } catch (e) {
     unLog();
     unDone();

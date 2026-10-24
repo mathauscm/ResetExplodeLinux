@@ -2,6 +2,12 @@
 
 export const invoke = (cmd, args) => window.__TAURI__.core.invoke(cmd, args);
 
+/** Chama um método de uma área nova (app/src-tauri/src/areas/<area>.rs): `call("network", "ping", {host})`. */
+export const call = (area, method, args = null) => invoke("area_call", { area, method, args });
+
+/** Escuta um evento do backend; devolve a função que para de escutar. */
+export const listen = (event, cb) => window.__TAURI__.event.listen(event, (e) => cb(e.payload));
+
 // Uma leitura de sensores serve a página e a barra lateral ao mesmo tempo: a carga da CPU é calculada
 // entre duas leituras, e leituras muito próximas dariam valores ruidosos.
 let lastSnap = { at: 0, p: null };

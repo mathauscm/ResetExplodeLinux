@@ -10,7 +10,19 @@ import * as disks from "./pages/disks.js";
 import * as lights from "./pages/lights.js";
 import * as drivers from "./pages/drivers.js";
 import * as apps from "./pages/apps.js";
-import * as soon from "./pages/soon.js";
+import * as energy from "./pages/energy.js";
+import * as network from "./pages/network.js";
+import * as library from "./pages/library.js";
+import * as fps from "./pages/fps.js";
+import * as bottleneck from "./pages/bottleneck.js";
+import * as overlay from "./pages/overlay.js";
+import * as bench from "./pages/bench.js";
+import * as stress from "./pages/stress.js";
+import * as oc from "./pages/oc.js";
+import * as optimize from "./pages/optimize.js";
+import * as startup from "./pages/startup.js";
+import * as ports from "./pages/ports.js";
+import * as serial from "./pages/serial.js";
 
 const ICONS = {
   home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
@@ -36,7 +48,7 @@ const ICONS = {
   usb: '<path d="M12 2v16M8 6l4-4 4 4M7 11v3l5 3M17 9v3l-5 3"/><circle cx="12" cy="20" r="2"/>',
 };
 
-// Mesma estrutura do app do Windows. `soon` = ainda não portado (mostra o plano da versão Linux).
+// Mesma estrutura do app do Windows.
 const NAV = [
   { items: [{ id: "dash", label: "Visão geral", icon: "home", page: dash }] },
   { group: "RESET EXPLODE", items: [
@@ -44,30 +56,30 @@ const NAV = [
     { id: "sensors", label: "Sensores", icon: "pulse", page: sensors },
     { id: "gpu", label: "Placa de vídeo", icon: "gpu", page: gpu },
     { id: "disks", label: "Discos", icon: "disk", page: disks },
-    { id: "energy", label: "Energia", icon: "bolt", soon: true },
-    { id: "net", label: "Rede", icon: "net", soon: true },
+    { id: "energy", label: "Energia", icon: "bolt", page: energy },
+    { id: "net", label: "Rede", icon: "net", page: network },
   ] },
   { group: "RESET JOGOS", items: [
-    { id: "library", label: "Biblioteca", icon: "lib", soon: true },
-    { id: "fps", label: "FPS estimado", icon: "fps", soon: true },
-    { id: "bottleneck", label: "Gargalo", icon: "neck", soon: true },
-    { id: "overlay", label: "Overlay", icon: "layers", soon: true },
+    { id: "library", label: "Biblioteca", icon: "lib", page: library },
+    { id: "fps", label: "FPS estimado", icon: "fps", page: fps },
+    { id: "bottleneck", label: "Gargalo", icon: "neck", page: bottleneck },
+    { id: "overlay", label: "Overlay", icon: "layers", page: overlay },
   ] },
   { group: "RESET DESEMPENHO", items: [
-    { id: "bench", label: "Benchmark", icon: "gauge", soon: true },
-    { id: "stress", label: "Stress test", icon: "flame", soon: true },
-    { id: "oc", label: "Overclock", icon: "oc", soon: true },
+    { id: "bench", label: "Benchmark", icon: "gauge", page: bench },
+    { id: "stress", label: "Stress test", icon: "flame", page: stress },
+    { id: "oc", label: "Overclock", icon: "oc", page: oc },
   ] },
   { group: "RESET FERRAMENTAS", items: [
     { id: "lights", label: "Iluminação RGB", icon: "rgb", page: lights },
-    { id: "optimize", label: "Otimização", icon: "tune", soon: true },
-    { id: "startup", label: "Inicialização", icon: "power", soon: true },
+    { id: "optimize", label: "Otimização", icon: "tune", page: optimize },
+    { id: "startup", label: "Inicialização", icon: "power", page: startup },
     { id: "apps", label: "Apps", icon: "box", page: apps },
     { id: "drivers", label: "Drivers e atualizações", icon: "chip", page: drivers },
   ] },
   { group: "RESET MAKER", items: [
-    { id: "ports", label: "Portas seriais", icon: "plug", soon: true },
-    { id: "serial", label: "Drivers seriais", icon: "usb", soon: true },
+    { id: "ports", label: "Portas seriais", icon: "plug", page: ports },
+    { id: "serial", label: "Drivers seriais", icon: "usb", page: serial },
   ] },
 ];
 
@@ -83,7 +95,7 @@ function buildNav() {
   const closed = JSON.parse(store("navClosed") ?? "[]");
   nav.innerHTML = NAV.map((g) => {
     const items = g.items
-      .map((it) => `<button class="nav-item" data-id="${it.id}" type="button">${svg(it.icon)}<span>${it.label}</span>${it.soon ? '<span class="soon">EM BREVE</span>' : ""}</button>`)
+      .map((it) => `<button class="nav-item" data-id="${it.id}" type="button">${svg(it.icon)}<span>${it.label}</span></button>`)
       .join("");
     if (!g.group) return `<div class="nav-items">${items}</div>`;
     const cls = closed.includes(g.group) ? " closed" : "";
@@ -113,7 +125,7 @@ function go(id) {
   const box = document.createElement("div");
   pageEl.replaceChildren(box);
   const token = ++navToken;
-  const mod = item.page ?? soon;
+  const mod = item.page;
   Promise.resolve(mod.render(box, item)).then((fn) => {
     if (token === navToken) cleanup = fn;
     else if (typeof fn === "function") fn();

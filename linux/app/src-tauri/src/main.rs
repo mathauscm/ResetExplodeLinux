@@ -1,15 +1,15 @@
 //! Janela do RESET EXPLODE para Linux. Toda a lógica fica no `reset-core`; aqui só ficam os comandos
 //! que a interface (app/ui) chama com `invoke`.
 
+mod areas;
+mod jobs;
+
 use reset_core::lighting::{self, ColorOrder, LightEnv, LightSettings, LightStatus, Lighting};
 use reset_core::sensors::{SensorMonitor, Snapshot};
 use reset_core::packages::{self, PkgAction};
 use reset_core::{apps, devices, disks, gpu, system};
-use serde::Serialize;
-use std::io::{BufRead, BufReader, Read};
-use std::process::{Command, Stdio};
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, State};
 
 struct Sensors(Mutex<SensorMonitor>);
 
@@ -122,75 +122,14 @@ async fn apps_catalog() -> Result<Vec<apps::CatalogApp>, ()> {
     Ok(apps::catalog())
 }
 
-/// Um trabalho do pacman por vez (ele mesmo trava o banco; aqui a interface fica sabendo antes).
-struct PkgJob(Mutex<bool>);
-
-#[derive(Clone, Serialize)]
-struct PkgDone {
-    ok: bool,
-    message: String,
-}
-
-/// Roda o pacman com root via pkexec (janela de senha do sistema) e manda a saída para a interface
-/// pelos eventos "pkg-log" (uma linha) e "pkg-done" (fim).
+/// Roda o pacman com root (atualizar, instalar, remover). A saída vai para a interface pelos eventos de `jobs`.
 #[tauri::command]
-fn pkg_run(app: AppHandle, job: State<PkgJob>, action: PkgAction) -> Result<(), String> {
+fn pkg_run(app: AppHandle, action: PkgAction) -> Result<(), String> {
     let args = packages::pacman_args(&action)?;
     if packages::pacman_locked() {
         return Err("outro programa está instalando ou atualizando pacotes agora. Espere ele terminar e tente de novo.".into());
     }
-    {
-        let mut running = job.0.lock().unwrap();
-        if *running {
-            return Err("já tem uma instalação em andamento.".into());
-        }
-        *running = true;
-    }
-    let child = Command::new("pkexec")
-        .arg(packages::PACMAN)
-        .args(&args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn();
-    let mut child = match child {
-        Ok(c) => c,
-        Err(e) => {
-            *job.0.lock().unwrap() = false;
-            return Err(format!("não deu para pedir permissão de administrador (pkexec): {e}"));
-        }
-    };
-    let _ = app.emit("pkg-log", format!("$ pacman {}", args.join(" ")));
-    let pipe = |r: Box<dyn Read + Send>, app: AppHandle| {
-        std::thread::spawn(move || {
-            let mut r = BufReader::new(r);
-            let mut buf = Vec::new();
-            while r.read_until(b'\n', &mut buf).map(|n| n > 0).unwrap_or(false) {
-                let line = String::from_utf8_lossy(&buf).trim_end().to_string();
-                if !line.is_empty() {
-                    let _ = app.emit("pkg-log", line);
-                }
-                buf.clear();
-            }
-        })
-    };
-    let out = pipe(Box::new(child.stdout.take().unwrap()), app.clone());
-    let err = pipe(Box::new(child.stderr.take().unwrap()), app.clone());
-    std::thread::spawn(move || {
-        let status = child.wait();
-        let _ = (out.join(), err.join());
-        let code = status.ok().and_then(|s| s.code());
-        let (ok, message) = match code {
-            Some(0) => (true, "Concluído.".to_string()),
-            Some(126) => (false, "Cancelado: a senha não foi confirmada.".to_string()),
-            Some(127) => (false, "Sem permissão de administrador para esta ação.".to_string()),
-            Some(c) => (false, format!("O pacman terminou com erro (código {c}). Veja o registro acima.")),
-            None => (false, "O processo foi interrompido.".to_string()),
-        };
-        *app.state::<PkgJob>().0.lock().unwrap() = false;
-        let _ = app.emit("pkg-done", PkgDone { ok, message });
-    });
-    Ok(())
+    jobs::spawn(&app, true, packages::PACMAN, &args)
 }
 
 /// Modo sem janela usado pelo login (`--apply-lights`): conecta, reaplica o efeito salvo e sai. Efeitos
@@ -237,7 +176,7 @@ fn main() {
     tauri::Builder::default()
         .manage(Sensors(Mutex::new(SensorMonitor::new())))
         .manage(lights)
-        .manage(PkgJob(Mutex::new(false)))
+        .manage(jobs::JobLock(Mutex::new(false)))
         .invoke_handler(tauri::generate_handler![
             system_info,
             gpu_list,
@@ -261,6 +200,7 @@ fn main() {
             apps_installed,
             apps_catalog,
             pkg_run,
+            areas::area_call,
         ])
         // ao fechar, os LEDs ficam como estão: as cores escolhidas valem até o próximo desligamento
         // (e voltam no login, se a opção estiver ligada)

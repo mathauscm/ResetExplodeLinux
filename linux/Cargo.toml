@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/reset-core", "app/src-tauri"]
+members = ["crates/reset-core", "crates/reset-gpu", "app/src-tauri"]
 
 [profile.release]
 lto = true

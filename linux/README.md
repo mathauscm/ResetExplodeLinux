@@ -70,3 +70,44 @@ Ao parar (ou fechar o app), cada dispositivo volta ao modo que tinha antes.
 
 Ainda não tem: sensores da placa-mãe MSI (o chip NCT6687 precisa do módulo `nct6687d`, no AUR), GPUs AMD/Intel
 e detalhes por pente de memória (exigem root).
+
+## Como uma tela nova é ligada
+
+Cada tela tem os próprios arquivos e nada mais precisa ser mexido:
+
+| Camada | Arquivo |
+|---|---|
+| Lógica (sem interface, testável) | `crates/reset-core/src/<módulo>.rs` |
+| Comandos que a interface chama | `app/src-tauri/src/areas/<área>.rs` → `dispatch(app, método, args) -> Result<Value, String>` |
+| Tela | `app/ui/js/pages/<tela>.js` → `render(el, item)` (devolve uma função de limpeza, se usar timers) |
+| Estilo da tela | `app/ui/css/<tela>.css` |
+
+Na interface: `call("<área>", "<método>", {args})` (de `js/lib.js`) devolve o JSON do `dispatch`.
+Eventos do backend: `app.emit("<área>-<evento>", payload)` no Rust e `listen("<área>-<evento>", cb)` no JS.
+Tarefas longas com saída ao vivo (com ou sem root via `pkexec`): `jobs::spawn` no Rust e `runJob` (`js/pkgjob.js`) no JS.
+
+Áreas: `energy` (Energia), `network` (Rede), `games` (Biblioteca, FPS estimado, Gargalo), `overlay`, `bench`
+(Benchmark), `stress` (Stress test), `oc` (Overclock), `tools` (Otimização, Inicialização), `maker` (Portas e
+drivers seriais).
+
+## reset-gpu (benchmarks e stress de GPU)
+
+Programa à parte (`crates/reset-gpu`), porque abre a própria janela Vulkan. O app o procura na mesma pasta
+do executável (`~/.local/bin` depois do `install-local.sh`, `target/<perfil>` no desenvolvimento) e lê a saída:
+**uma linha JSON por evento** no stdout.
+
+```
+reset-gpu info
+reset-gpu scene --width 1920 --height 1080 --seconds 30 [--fullscreen]
+reset-gpu rt    --preset normal|alta|extrema --width 1920 --height 1080 --seconds 30 [--fullscreen]
+reset-gpu burn  --width 1920 --height 1080 --msaa 0|4|8 --intensity normal|alta|extrema --seconds 600 --temp-limit 85 [--fullscreen]
+```
+
+| Linha | Quando |
+|---|---|
+| `{"type":"info","adapter":"NVIDIA GeForce RTX 4060","backend":"vulkan","driver":"…","ray_query":true}` | `info`, e no começo dos outros |
+| `{"type":"progress","elapsed":12.5,"fps":143.2,"temp_c":61,"power_w":null}` | ~2x por segundo |
+| `{"type":"result","test":"scene","avg_fps":680.1,"low1_fps":512.3,"frames":20403,"seconds":30.0,"score":6801,"stopped":"tempo"}` | no fim (`stopped`: `tempo`, `temperatura` ou `usuario`) |
+| `{"type":"error","message":"…"}` | erro (código de saída ≠ 0) |
+
+ESC ou fechar a janela encerra (`"stopped":"usuario"`). Nota: `scene` = FPS médio × 10; `rt` = amostras/s ÷ 10.000.

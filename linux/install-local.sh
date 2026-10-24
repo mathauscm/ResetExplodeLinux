@@ -9,14 +9,16 @@ ICON="$HOME/.local/share/icons/hicolor/256x256/apps/reset-explode.png"
 DESKTOP="$HOME/.local/share/applications/reset-explode.desktop"
 
 if [[ "${1:-}" == "--remove" ]]; then
-  rm -f "$BIN" "$ICON" "$DESKTOP"
+  rm -f "$BIN" "$(dirname "$BIN")/reset-gpu" "$ICON" "$DESKTOP"
   update-desktop-database -q "$HOME/.local/share/applications" 2>/dev/null || true
   echo "RESET EXPLODE removido."
   exit 0
 fi
 
-cargo build --release -p reset-explode
+cargo build --release -p reset-explode -p reset-gpu
 install -Dm755 target/release/reset-explode "$BIN"
+# benchmarks e stress de GPU: programa à parte, ao lado do app (ele o procura na mesma pasta)
+install -Dm755 target/release/reset-gpu "$(dirname "$BIN")/reset-gpu"
 install -Dm644 app/src-tauri/icons/icon.png "$ICON"
 mkdir -p "$(dirname "$DESKTOP")"
 cat > "$DESKTOP" <<EOF

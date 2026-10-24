@@ -1,0 +1,8 @@
+[package]
+name = "reset-gpu"
+version = "0.1.0"
+edition = "2021"
+description = "Benchmarks e stress de GPU do RESET EXPLODE para Linux (janela própria, Vulkan)"
+license = "MIT"
+
+[dependencies]
