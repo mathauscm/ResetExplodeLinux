@@ -168,6 +168,11 @@ fn stop_headless_instances() {
 }
 
 fn main() {
+    // modo sem janela da tela Overclock: rodado via pkexec, aplica os ajustes da GPU (NVML) e sai
+    let args: Vec<String> = std::env::args().collect();
+    if let Some(i) = args.iter().position(|a| a == reset_core::oc::CLI_FLAG) {
+        std::process::exit(reset_core::oc::cli_main(&args[i + 1..]));
+    }
     if std::env::args().any(|a| a == "--apply-lights") {
         return apply_lights_headless();
     }
