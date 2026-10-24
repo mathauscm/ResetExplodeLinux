@@ -171,6 +171,8 @@ function store(k, v) {
 }
 
 buildNav();
+// versão do tauri.conf.json (a mesma do instalador e da release)
+window.__TAURI__.app?.getVersion().then((v) => (document.getElementById("appVersion").textContent = `v${v} · linux`)).catch(() => {});
 applyTheme(store("theme") === "light");
 go(store("page") ?? "dash");
 mini();

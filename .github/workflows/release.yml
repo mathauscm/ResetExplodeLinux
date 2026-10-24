@@ -1,0 +1,110 @@
+# Gera e publica os instaladores quando uma versão sobe:
+#   git tag v0.1.1 && git push origin v0.1.1
+# (a tag tem que bater com a "version" de app/src-tauri/tauri.conf.json). Também dá para rodar à mão em
+# Actions → Release Linux → Run workflow, informando a tag.
+#
+# Compila no Ubuntu 22.04 de propósito: o binário fica pedindo glibc 2.35, então roda do Ubuntu 22.04,
+# Debian 12 e Fedora 38 para cima. Compilado numa distro nova ele só abriria nas distros novas.
+
+name: Release Linux
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag da versão (ex.: v0.1.1)"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      # glslc (compilador dos shaders do reset-gpu): o Ubuntu 22.04 não tem; vem do Vulkan SDK da LunarG
+      VULKAN_SDK_VERSION: 1.4.363.0
+      # o linuxdeploy é um AppImage: no runner ele roda extraído, sem depender de FUSE
+      APPIMAGE_EXTRACT_AND_RUN: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Conferir a versão
+        run: |
+          V=$(sed -n 's/^  "version": "\(.*\)",$/\1/p' app/src-tauri/tauri.conf.json)
+          if [ "v$V" != "$TAG" ]; then
+            echo "::error::A tag $TAG não bate com a versão $V do app/src-tauri/tauri.conf.json"
+            exit 1
+          fi
+
+      - name: Dependências do sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config file patchelf libfuse2 xdg-utils libarchive-tools \
+            libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libssl-dev
+
+      - name: Cache do glslc
+        id: glslc
+        uses: actions/cache@v4
+        with:
+          path: ~/glslc
+          key: glslc-${{ env.VULKAN_SDK_VERSION }}
+
+      - name: Baixar o glslc
+        if: steps.glslc.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/glslc
+          curl -sfL "https://sdk.lunarg.com/sdk/download/$VULKAN_SDK_VERSION/linux/vulkansdk-linux-x86_64-$VULKAN_SDK_VERSION.tar.xz" \
+            | tar -xJ -C ~/glslc --strip-components=3 --wildcards '*/x86_64/bin/glslc'
+
+      - name: Usar o glslc
+        run: |
+          echo "GLSLC=$HOME/glslc/glslc" >> "$GITHUB_ENV"
+          ~/glslc/glslc --version | head -1
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: tauri-cli
+        run: cargo tauri --version 2>/dev/null || cargo install tauri-cli --version '^2.12' --locked
+
+      - name: Gerar os instaladores
+        run: ./scripts/release.sh
+
+      - name: Conferir os instaladores
+        run: |
+          cd dist
+          sha256sum -c SHA256SUMS
+          # o reset-gpu (testes de GPU) tem que estar dentro do .deb e do .rpm
+          dpkg-deb -c ./*.deb | grep -q 'usr/bin/reset-gpu'
+          bsdtar -tf ./*.rpm | grep -q 'usr/bin/reset-gpu'
+          echo "glibc exigida:"; objdump -T ../target/release/reset-explode | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -1
+
+      - name: Publicar na release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          files=(dist/*.AppImage dist/*.deb dist/*.rpm dist/SHA256SUMS)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # release criada pelo site: só anexa os arquivos e põe o "qual arquivo baixar" no começo das notas
+            gh release upload "$TAG" "${files[@]}" --clobber
+            body=$(gh release view "$TAG" --json body -q .body)
+            if ! grep -q 'reset-explode:instalar' <<<"$body"; then
+              { cat dist/NOTAS.md; echo; echo "$body"; } > notas-completas.md
+              gh release edit "$TAG" --notes-file notas-completas.md
+            fi
+          else
+            gh release create "$TAG" "${files[@]}" \
+              --title "RESET EXPLODE para Linux $TAG" \
+              --notes-file dist/NOTAS.md --generate-notes
+          fi

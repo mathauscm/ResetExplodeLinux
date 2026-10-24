@@ -33,13 +33,17 @@ app/
 
 ## Instalar
 
-Baixe o instalador na página de [releases](https://github.com/mathauscm/ResetExplodeLinux/releases/latest):
+Baixe o instalador da sua distribuição na página de [releases](https://github.com/mathauscm/ResetExplodeLinux/releases/latest).
+O nome do arquivo diz para qual distribuição ele é:
 
-| Sistema | Arquivo | Como |
-|---|---|---|
-| Qualquer distro (Arch, CachyOS, Manjaro…) | `reset-explode_<versão>_x86_64.AppImage` | marque como executável (`chmod +x`, ou Propriedades → Executável) e abra |
-| Ubuntu, Debian, Mint, Pop!_OS | `reset-explode_<versão>_amd64.deb` | dois cliques, ou `sudo apt install ./reset-explode_<versão>_amd64.deb` |
-| Fedora | `reset-explode-<versão>-1.x86_64.rpm` | dois cliques, ou `sudo dnf install ./reset-explode-<versão>-1.x86_64.rpm` |
+| Sua distribuição | Arquivo |
+|---|---|
+| Ubuntu 22.04+, Linux Mint 21+, Pop!_OS 22.04+, Zorin OS 17+, elementary OS 7+, Debian 12+ | `reset-explode-<versão>-ubuntu-debian-amd64.deb` |
+| Fedora 38+ | `reset-explode-<versão>-fedora-x86_64.rpm` |
+| Arch, CachyOS, Manjaro, EndeavourOS, openSUSE e qualquer outra | `reset-explode-<versão>-qualquer-distro-x86_64.AppImage` |
+
+O `.deb` e o `.rpm` instalam com dois cliques e criam o atalho no menu. O AppImage roda direto: marque como
+executável e abra.
 
 ## Desenvolver
 
@@ -58,9 +62,16 @@ cargo test -p reset-core
 Para instalar no seu usuário (aparece no menu de aplicativos, sem sudo): `./install-local.sh`.
 Para atualizar, rode de novo; para remover, `./install-local.sh --remove`.
 
-Para gerar os instaladores de uma release (AppImage, .deb e .rpm, já com o `reset-gpu` dentro, mais o
-`SHA256SUMS`) em `dist/`: `cargo install tauri-cli --version '^2'` uma vez e depois `./scripts/release.sh`. A versão
-vem de `app/src-tauri/tauri.conf.json`.
+## Publicar uma versão
+
+1. Mude a `"version"` em `app/src-tauri/tauri.conf.json` e faça o merge na `main`.
+2. Crie a tag da versão: `git tag v0.1.2 && git push origin v0.1.2` (ou crie a release pelo site do GitHub).
+3. O workflow `.github/workflows/release.yml` compila no Ubuntu 22.04 (glibc 2.35, para rodar em mais distros),
+   gera os três instaladores com `scripts/release.sh` e os publica na release, com a tabela "qual arquivo baixar"
+   (`.github/release-notes.md`). Leva uns 15 minutos; dá para acompanhar em **Actions**.
+
+Para gerar os instaladores na sua máquina, em `dist/`: `cargo install tauri-cli --version '^2'` uma vez e depois
+`./scripts/release.sh`.
 
 ## Iluminação RGB
 
