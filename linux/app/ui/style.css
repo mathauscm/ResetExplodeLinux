@@ -226,3 +226,45 @@ details.adv summary { cursor: pointer; color: var(--muted); font-size: 12px; }
 .cat-item:hover { border-color: var(--line-strong); }
 .cat-item.done { opacity: .6; cursor: default; }
 .install-bar { position: sticky; bottom: -40px; padding-bottom: 54px !important; z-index: 2; display: flex; gap: 14px; align-items: center; padding: 14px 0; background: var(--bg); border-top: 1px solid var(--line); }
+
+/* ---------------- iluminação: alvo, prévia e interruptores ---------------- */
+.lt-scope { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; margin-bottom: 12px; }
+.lt-tab {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px; min-width: 170px;
+  background: var(--bg); border: 1px solid var(--line-strong); border-radius: 10px; color: var(--fg); cursor: pointer; text-align: left;
+}
+.lt-tab:hover { background: var(--hover); }
+.lt-tab.on { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
+.lt-tab-txt { display: flex; flex-direction: column; line-height: 1.25; flex: 1; }
+.lt-ico { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 8px; background: var(--hover); color: var(--fg); }
+.lt-ico svg { width: 18px; height: 18px; }
+.lt-dot { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line-strong); flex: none; }
+.lt-main { align-items: start; }
+.lt-sliders { display: grid; grid-template-columns: 74px 1fr; gap: 10px 8px; align-items: center; margin-top: 12px; }
+input.sat { appearance: none; -webkit-appearance: none; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #fff, var(--hue-color, #f00)); }
+input.sat::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid #000; }
+.muted-box { opacity: .4; }
+.lt-dev {
+  display: flex; align-items: center; gap: 12px; padding: 10px; margin: 4px -10px; border-radius: 10px;
+  border: 1px solid transparent; cursor: pointer;
+}
+.lt-dev:hover { background: var(--hover); }
+.lt-dev.on { border-color: var(--line-strong); background: var(--hover); }
+.lt-dev.disabled .lt-dev-main { opacity: .55; }
+.lt-dev-main { flex: 1; min-width: 0; }
+.lt-strip { height: 8px; border-radius: 4px; margin-top: 7px; border: 1px solid var(--line); background-size: 200% 100% !important; }
+.lt-strip.off, .lt-dot.off { background: repeating-linear-gradient(45deg, var(--line), var(--line) 3px, transparent 3px, transparent 7px) !important; }
+.flow { animation: lt-flow 4s linear infinite; background-size: 200% 100% !important; }
+.breath { animation: lt-breath 3s ease-in-out infinite; }
+@keyframes lt-flow { to { background-position: 200% 0; } }
+@keyframes lt-breath { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .flow, .breath { animation: none; } }
+.switch { position: relative; width: 38px; height: 22px; flex: none; cursor: pointer; }
+.switch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.switch span { position: absolute; inset: 0; border-radius: 11px; background: var(--line-strong); transition: background .15s; }
+.switch span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); transition: transform .15s; }
+.switch input:checked + span { background: var(--fg); }
+.switch input:checked + span::after { transform: translateX(16px); }
+.lt-adv { margin-top: 12px; }
+.lt-adv summary { cursor: pointer; }
+.lt-zdev { padding: 10px 0; border-top: 1px solid var(--line); }

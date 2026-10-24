@@ -121,7 +121,7 @@ fn zone_key(device: &LightDevice, zone: &Zone) -> String {
     format!("{}|{}", device.name, zone.name)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Effect {
     Static,
@@ -133,8 +133,18 @@ pub enum Effect {
     Off,
 }
 
+/// Aparência de um dispositivo: efeito, cor, brilho (0–100) e velocidade (1–10).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct Look {
+    pub effect: Effect,
+    pub color: [u8; 3],
+    pub brightness: u8,
+    pub speed: f64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LightSettings {
+    /// Aparência do "PC inteiro".
     pub effect: Effect,
     pub color: [u8; 3],
     /// 0–100
@@ -143,11 +153,31 @@ pub struct LightSettings {
     pub speed: f64,
     /// Ids dos dispositivos que o efeito controla.
     pub selected: Vec<String>,
+    /// Dispositivos com aparência própria (ex.: só a memória em outra cor), pelo NOME do dispositivo.
+    /// Quem não está aqui segue o PC inteiro.
+    #[serde(default)]
+    pub overrides: HashMap<String, Look>,
 }
 
 impl Default for LightSettings {
     fn default() -> Self {
-        Self { effect: Effect::Static, color: [255, 0, 0], brightness: 100, speed: 5.0, selected: Vec::new() }
+        Self { effect: Effect::Static, color: [255, 0, 0], brightness: 100, speed: 5.0, selected: Vec::new(), overrides: HashMap::new() }
+    }
+}
+
+impl LightSettings {
+    pub fn global(&self) -> Look {
+        Look { effect: self.effect, color: self.color, brightness: self.brightness, speed: self.speed }
+    }
+
+    /// Algum dispositivo usa efeito que muda com o tempo (precisa do app rodando para continuar).
+    pub fn any_animated(&self) -> bool {
+        is_animated(self.effect) || self.overrides.values().any(|l| is_animated(l.effect))
+    }
+
+    /// Aparência que vale para o dispositivo `name`.
+    pub fn look_for(&self, name: &str) -> Look {
+        self.overrides.get(name).copied().unwrap_or_else(|| self.global())
     }
 }
 
@@ -376,10 +406,12 @@ impl Lighting {
                     c.release(&id);
                 }
                 st.acquired.remove(&id);
+                st.last.remove(&id);
             }
         }
+        // sem limpar `last`: o motor só reenvia o dispositivo cuja cor mudou de verdade (reenviar a mesma
+        // cor faz a memória, que vai pelo SMBus, piscar)
         st.settings = settings;
-        st.last.clear();
         st.persist();
         status(&st)
     }
@@ -435,6 +467,7 @@ impl Lighting {
             st.message = "controle devolvido: os LEDs voltaram ao efeito de antes.".into();
         }
         st.acquired.clear();
+        st.last.clear();
         status(st)
     }
 
@@ -535,75 +568,83 @@ fn in_path(bin: &str) -> bool {
 
 /// Intervalo mínimo entre envios ao OpenRGB por dispositivo (o mesmo do app do Windows).
 const MIN_INTERVAL: Duration = Duration::from_millis(25);
-/// Reenvia mesmo sem mudança de cor, para o firmware não retomar o efeito próprio.
-const KEEPALIVE: Duration = Duration::from_secs(2);
+/// Memórias RGB vão pelo SMBus, que é lento: atualizar rápido demais faz os pentes piscarem.
+const MIN_INTERVAL_SLOW: Duration = Duration::from_millis(150);
+// Sem reenvio periódico da mesma cor (o app do Windows fazia isso para o iCUE/Synapse não retomarem as
+// luzes): com o OpenRGB ninguém retoma, e reenviar a mesma cor faz a memória piscar.
+
+fn min_interval(d: &LightDevice) -> Duration {
+    if d.kind == "Memória" { MIN_INTERVAL_SLOW } else { MIN_INTERVAL }
+}
+
+fn is_live(e: Effect) -> bool {
+    matches!(e, Effect::CpuTemp | Effect::GpuTemp | Effect::CpuLoad)
+}
 
 fn engine(state: Arc<Mutex<State>>) {
     let clock = Instant::now();
     let mut sensors = SensorMonitor::new();
     let mut last_poll = Instant::now() - Duration::from_secs(10);
-    let mut smooth: Option<f64> = None;
-    let mut last_effect = Effect::Static;
-    let mut live_value: Option<f64> = None;
+    // valor suavizado de cada efeito ao vivo (a cor não "pisca" com a oscilação da temperatura)
+    let mut smooth: HashMap<Effect, f64> = HashMap::new();
+    let mut raw: HashMap<Effect, Option<f64>> = HashMap::new();
 
     loop {
         thread::sleep(Duration::from_millis(33));
         let mut st = state.lock().unwrap();
         if !st.running || st.conn.is_none() {
-            smooth = None;
+            smooth.clear();
             continue;
         }
         let s = st.settings.clone();
-        if s.effect != last_effect {
-            smooth = None;
-            last_effect = s.effect;
-        }
 
-        // efeitos ligados a sensores: lê 2x por segundo e suaviza (a cor não "pisca" com a oscilação da temperatura)
-        let live_effect = matches!(s.effect, Effect::CpuTemp | Effect::GpuTemp | Effect::CpuLoad);
-        let mut live_rgb = None;
-        if live_effect {
-            if last_poll.elapsed() >= Duration::from_millis(500) {
-                drop(st);
-                let snap = sensors.poll();
-                last_poll = Instant::now();
-                live_value = match s.effect {
-                    Effect::CpuTemp => snap.summary.cpu_temp_c,
-                    Effect::GpuTemp => snap.summary.gpu.as_ref().and_then(|g| g.temp_c).map(|v| v as f64),
-                    _ => snap.summary.cpu_load_pct,
-                };
-                st = state.lock().unwrap();
-                if !st.running {
-                    continue;
-                }
+        // efeitos ligados a sensores em uso (no PC inteiro ou em algum dispositivo): lê 2x por segundo
+        let mut live_in_use: Vec<Effect> = st
+            .devices
+            .iter()
+            .filter(|d| s.selected.contains(&d.id))
+            .map(|d| s.look_for(&d.name).effect)
+            .filter(|e| is_live(*e))
+            .collect();
+        live_in_use.sort_by_key(|e| *e as u8);
+        live_in_use.dedup();
+        if !live_in_use.is_empty() && last_poll.elapsed() >= Duration::from_millis(500) {
+            drop(st);
+            let snap = sensors.poll();
+            last_poll = Instant::now();
+            raw.insert(Effect::CpuTemp, snap.summary.cpu_temp_c);
+            raw.insert(Effect::GpuTemp, snap.summary.gpu.as_ref().and_then(|g| g.temp_c).map(|v| v as f64));
+            raw.insert(Effect::CpuLoad, snap.summary.cpu_load_pct);
+            st = state.lock().unwrap();
+            if !st.running {
+                continue;
             }
-            match live_value {
+        }
+        let mut live_rgb: HashMap<Effect, [u8; 3]> = HashMap::new();
+        let mut live_text = Vec::new();
+        for e in &live_in_use {
+            match raw.get(e).copied().flatten() {
                 None => {
-                    st.live = "Sensor indisponível.".into();
-                    live_rgb = Some([0, 0, 40]);
+                    live_text.push("Sensor indisponível.".to_string());
+                    live_rgb.insert(*e, [0, 0, 40]);
                 }
-                Some(raw) => {
-                    let v = match smooth {
-                        None => raw,
-                        Some(p) => p + (raw - p) * 0.08,
-                    };
-                    smooth = Some(v);
-                    let hue = if s.effect == Effect::CpuLoad {
-                        st.live = format!("CPU {v:.0}% de carga");
+                Some(r) => {
+                    let v = smooth.get(e).map_or(r, |p| p + (r - p) * 0.08);
+                    smooth.insert(*e, v);
+                    let hue = if *e == Effect::CpuLoad {
+                        live_text.push(format!("CPU {v:.0}% de carga"));
                         120.0 * (1.0 - (v / 100.0).clamp(0.0, 1.0))
                     } else {
-                        st.live = format!("{} {v:.0} °C", if s.effect == Effect::CpuTemp { "CPU" } else { "GPU" });
+                        live_text.push(format!("{} {v:.0} °C", if *e == Effect::CpuTemp { "CPU" } else { "GPU" }));
                         240.0 * (1.0 - ((v - 35.0) / 50.0).clamp(0.0, 1.0))
                     };
-                    live_rgb = Some(hsv(hue, 1.0, 1.0));
+                    live_rgb.insert(*e, hsv(hue, 1.0, 1.0));
                 }
             }
-        } else {
-            st.live.clear();
         }
+        st.live = live_text.join(" · ");
 
         let t = clock.elapsed().as_secs_f64();
-        let bright = s.brightness.min(100) as f64 / 100.0;
         let now = Instant::now();
         if st.identify.as_ref().is_some_and(|(_, _, until)| now >= *until) {
             st.identify = None;
@@ -613,10 +654,13 @@ fn engine(state: Arc<Mutex<State>>) {
         let ident = st.identify.clone();
         for d in st.devices.iter().filter(|d| s.selected.contains(&d.id) || ident.as_ref().is_some_and(|(id, _, _)| *id == d.id)) {
             if let Some((_, at)) = st.last.get(&d.id) {
-                if now.duration_since(*at) < MIN_INTERVAL {
+                if now.duration_since(*at) < min_interval(d) {
                     continue;
                 }
             }
+            let look = s.look_for(&d.name);
+            let bright = look.brightness.min(100) as f64 / 100.0;
+            let live = live_rgb.get(&look.effect).copied();
             // os LEDs do dispositivo vêm zona após zona, na ordem das zonas
             let orders = d.zones.iter().flat_map(|z| std::iter::repeat_n(z.order, z.leds as usize)).chain(std::iter::repeat(ColorOrder::Rgb));
             let mut cols: Vec<[u8; 3]> = d
@@ -624,7 +668,7 @@ fn engine(state: Arc<Mutex<State>>) {
                 .iter()
                 .zip(orders)
                 .map(|(&x, order)| {
-                    let c = effect_color(s.effect, s.color, s.speed, t, x, live_rgb);
+                    let c = effect_color(look.effect, look.color, look.speed, t, x, live);
                     order.apply(c.map(|v| (v as f64 * bright) as u8))
                 })
                 .collect();
@@ -636,10 +680,8 @@ fn engine(state: Arc<Mutex<State>>) {
                     *c = if i >= start && i < start + len { [255, 255, 255] } else { [0, 0, 0] };
                 }
             }
-            if let Some((prev, at)) = st.last.get(&d.id) {
-                if *prev == cols && now.duration_since(*at) < KEEPALIVE {
-                    continue;
-                }
+            if st.last.get(&d.id).is_some_and(|(prev, _)| *prev == cols) {
+                continue;
             }
             let Some(conn) = st.conn.as_mut() else { break };
             if st.acquired.insert(d.id.clone()) {
@@ -703,6 +745,19 @@ mod tests {
         // um LED GRB lê o 1º byte como verde: para mostrar rosa ele precisa receber [138, 220, 221]
         assert_eq!(ColorOrder::Grb.apply(rosa), [138, 220, 221]);
         assert_eq!(ColorOrder::Bgr.apply([1, 2, 3]), [3, 2, 1]);
+    }
+
+    #[test]
+    fn aparencia_por_dispositivo() {
+        let mut s = LightSettings { color: [0, 60, 255], ..Default::default() };
+        assert_eq!(s.look_for("Kingston Fury DDR4 DRAM").color, [0, 60, 255]);
+        s.overrides.insert("Kingston Fury DDR4 DRAM".into(), Look { effect: Effect::Breath, color: [255, 0, 0], brightness: 50, speed: 3.0 });
+        assert_eq!(s.look_for("Kingston Fury DDR4 DRAM").color, [255, 0, 0]);
+        assert_eq!(s.look_for("MSI B550M PRO-VDH WIFI (MS-7C95)").color, [0, 60, 255]);
+        assert!(s.any_animated());
+        // configuração antiga, sem "overrides", continua abrindo
+        let old: LightSettings = serde_json::from_str(r#"{"effect":"static","color":[1,2,3],"brightness":100,"speed":5.0,"selected":[]}"#).unwrap();
+        assert!(old.overrides.is_empty());
     }
 
     #[test]

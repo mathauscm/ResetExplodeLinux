@@ -156,7 +156,7 @@ fn apply_lights_headless() {
     if !s.running {
         return;
     }
-    if lighting::is_animated(s.settings.effect) {
+    if s.settings.any_animated() {
         loop {
             std::thread::sleep(std::time::Duration::from_secs(3600));
         }
