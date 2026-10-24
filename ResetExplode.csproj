@@ -14,6 +14,8 @@
     <!-- Sempre otimizado: o RESET BENCH e os stress tests precisam do JIT otimizado também em Debug -->
     <Optimize>true</Optimize>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- linux\ é o port em Rust/Tauri: fica fora do projeto WPF -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);linux\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "RESET EXPLODE",
+  "version": "0.1.0",
+  "identifier": "com.reset.explode",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "RESET EXPLODE",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 960,
+        "minHeight": 600,
+        "backgroundColor": "#000000"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["appimage", "deb", "rpm"],
+    "category": "Utility",
+    "shortDescription": "Hardware, sensores, benchmarks e LEDs",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/icon.png"]
+  }
+}
