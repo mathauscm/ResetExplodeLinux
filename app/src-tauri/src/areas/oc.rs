@@ -71,7 +71,7 @@ fn index(args: &Value) -> u32 {
 fn spawn_apply(app: &AppHandle, req: &OcRequest) -> Result<Value, String> {
     let g = gpu(req.index)?;
     let plan = oc::validate(req, &g.limits)?;
-    let exe = std::env::current_exe().map_err(|e| format!("não deu para achar o executável do app: {e}"))?;
+    let exe = reset_core::util::self_exe().map_err(|e| format!("não deu para achar o executável do app: {e}"))?;
     crate::jobs::spawn(app, true, &exe.to_string_lossy(), &plan.args())?;
     Ok(Value::Null)
 }

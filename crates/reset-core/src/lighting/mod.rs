@@ -546,7 +546,7 @@ pub fn set_autostart(on: bool) -> Result<(), String> {
             _ => Ok(()),
         };
     }
-    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let exe = crate::util::self_exe().map_err(|e| e.to_string())?;
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     }
