@@ -1,1 +1,70 @@
-/* Estilos da tela "startup". */
+/* Estilos da tela "startup" (Inicialização). Reaproveita .opt-tag, .opt-risk, .opt-msg e .opt-actions do
+   optimize.css (as duas telas são da mesma área e os dois arquivos são sempre carregados). */
+
+/* ---------------- tempo de boot ---------------- */
+.st-top { align-items: start; }
+.st-top .big { margin: 2px 0 12px; }
+.st-phases { display: flex; gap: 2px; height: 10px; border-radius: 5px; overflow: hidden; }
+.st-phases i { display: block; min-width: 3px; }
+/* fases em tons do texto, do mais forte ao mais fraco: monocromático nos dois temas */
+.ph-0 { background: var(--fg); }
+.ph-1 { background: color-mix(in srgb, var(--fg) 72%, var(--card)); }
+.ph-2 { background: color-mix(in srgb, var(--fg) 50%, var(--card)); }
+.ph-3 { background: color-mix(in srgb, var(--fg) 32%, var(--card)); }
+.ph-4 { background: color-mix(in srgb, var(--fg) 18%, var(--card)); }
+.st-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px 16px; margin-top: 12px; font-size: 12px; }
+.st-legend div { display: flex; align-items: center; gap: 7px; }
+.st-legend i { width: 9px; height: 9px; border-radius: 2px; flex: none; }
+.st-legend span { color: var(--muted); flex: 1; }
+.st-legend b { font: 500 12px var(--mono); }
+.st-after { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.st-after b { color: var(--fg); font: 500 12px var(--mono); }
+.st-tip { font-size: 12px; line-height: 1.5; }
+
+.st-slow { padding: 6px 0; }
+.st-slow .row { flex-wrap: nowrap; }
+.st-unit { min-width: 0; font-size: 12px; }
+.st-slowbar { height: 4px; background: var(--hover); border-radius: 2px; overflow: hidden; margin: 4px 0 2px; }
+.st-slowbar i { display: block; height: 100%; background: var(--fg); border-radius: 2px; }
+.st-sub-h { margin: 12px 0 2px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; color: var(--faint); text-transform: uppercase; }
+
+/* ---------------- lista ---------------- */
+.st-msg { margin-top: 12px; }
+.st-bar { margin: 22px 0 6px; }
+.st-count { display: inline-block; min-width: 18px; margin-left: 4px; padding: 0 5px; border-radius: 999px; background: var(--hover); color: var(--muted); font: 600 10.5px var(--mono); text-align: center; }
+.chip.on .st-count { background: var(--ink); color: var(--fg); }
+.st-intro { margin: 0 0 10px; }
+.st-list { padding: 4px 16px; }
+.st-row { align-items: flex-start; padding: 14px 0; }
+.st-row.off .st-icon, .st-row.na .st-icon { opacity: .45; filter: grayscale(1); }
+.st-row.off .st-title b { color: var(--muted); }
+.st-icon { width: 38px; height: 38px; margin-top: 2px; }
+.st-icon.gear { display: grid; place-items: center; border-radius: 10px; background: var(--hover); color: var(--muted); }
+.st-icon.gear svg { width: 20px; height: 20px; }
+.st-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.st-title { gap: 8px; }
+.st-title b { font-size: 13.5px; }
+.st-hint { font-size: 12px; color: var(--fg); opacity: .85; margin: 2px 0; }
+.st-meta { gap: 6px 14px; margin-top: 5px; }
+.st-side { flex: none; width: 250px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; padding-top: 2px; }
+.st-lock { font-size: 11.5px; color: var(--faint); max-width: 250px; }
+.opt-tag.st-bad { color: var(--bad); border-color: var(--bad); }
+
+/* impacto: um traço com 1, 2 ou 3 partes cheias */
+.st-imp { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--fg); }
+.st-imp i { width: 22px; height: 4px; border-radius: 2px; background: var(--hover); position: relative; overflow: hidden; }
+.st-imp i::after { content: ""; position: absolute; inset: 0 auto 0 0; border-radius: 2px; background: var(--fg); }
+.st-imp.lo i::after { width: 33%; }
+.st-imp.mid i::after { width: 66%; background: var(--warn); }
+.st-imp.hi i::after { width: 100%; background: var(--bad); }
+.st-imp.none { color: var(--faint); }
+
+.st-more { margin-top: 10px; padding: 12px 16px; }
+.st-more summary { cursor: pointer; font-size: 12.5px; list-style-position: outside; }
+.st-more[open] summary { margin-bottom: 4px; }
+.st-more .st-row:first-child { border-top: 1px solid var(--line); }
+
+@media (max-width: 900px) {
+  .st-row { flex-wrap: wrap; }
+  .st-side { width: 100%; flex-direction: row; justify-content: flex-end; }
+}
