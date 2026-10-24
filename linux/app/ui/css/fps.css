@@ -1,1 +1,37 @@
-/* Estilos da tela "fps". */
+/* Estilos da tela "fps": opções, hardware/fonte e os cartões dos jogos. */
+
+.fps-search { width: 240px; }
+.fps-sub { margin: -10px 0 14px; }
+.fps-opts { display: flex; flex-wrap: wrap; gap: 6px 34px; padding-top: 4px; margin-bottom: 12px; }
+.fps-opts .field { margin-top: 8px; }
+
+.fps-top { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); margin-bottom: 18px; }
+.fps-hw { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.fps-hw b { font-size: 15px; }
+.fps-idx { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.fps-idx .bar { flex: 1; }
+.fps-idx span { font: 500 11.5px var(--mono); color: var(--muted); min-width: 30px; text-align: right; }
+.fps-feat { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 11.5px; }
+
+.fps-bar { margin-bottom: 12px; }
+.fps-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); }
+.fps-card { display: flex; flex-direction: column; padding: 14px 14px 12px; transition: border-color .15s; }
+.fps-card:hover { border-color: var(--line-strong); }
+.fps-card.installed { border-color: var(--line-strong); }
+.fps-head { display: flex; align-items: center; gap: 8px; }
+.fps-name { font-weight: 700; font-size: 13px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fps-num { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 10px 0 8px; }
+.fps-num .big { margin: 0; font-size: 28px; }
+.fps-num .big small { font-size: 11px; letter-spacing: .06em; }
+.fps-rate { display: inline-flex; align-items: center; gap: 5px; font: 700 10px var(--sans); letter-spacing: .08em; color: var(--muted); white-space: nowrap; }
+.fps-rate .dot { margin: 0; width: 7px; height: 7px; background: var(--fg); }
+.fps-rate .dot.ok { background: var(--ok); }
+.fps-rate .dot.warn { background: var(--warn); }
+.fps-rate .dot.bad { background: var(--bad); }
+.fps-foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.fps-src { color: var(--faint); font: 700 9.5px var(--sans); letter-spacing: .08em; }
+.fps-detail { margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 16px; }
+#source input[type="password"] {
+  background: var(--bg); color: var(--fg); border: 1px solid var(--line-strong); border-radius: 6px;
+  padding: 6px 9px; font: 12.5px var(--mono); user-select: text;
+}

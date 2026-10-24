@@ -1,1 +1,49 @@
-/* Estilos da tela "bottleneck". */
+/* Estilos da tela "bottleneck": equilíbrio, veredito ao vivo, medidores e a análise de sessão. */
+
+.bn-sub { margin: -10px 0 14px; }
+.bn-top { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); margin-bottom: 12px; }
+
+/* equilíbrio GPU × CPU */
+.bn-names { display: flex; justify-content: space-between; gap: 12px; }
+.bn-names > div { display: flex; flex-direction: column; }
+.bn-names b { font-size: 15px; margin: 1px 0; }
+.bn-scale { position: relative; height: 18px; margin: 16px 9px 0; }
+.bn-scale::before { content: ""; position: absolute; left: -9px; right: -9px; top: 8px; height: 2px; border-radius: 1px; background: var(--line-strong); }
+.bn-mid { position: absolute; left: 50%; top: 2px; width: 2px; height: 14px; margin-left: -1px; background: var(--faint); border-radius: 1px; }
+.bn-dot {
+  position: absolute; top: 0; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%;
+  background: var(--fg); border: 3px solid var(--card); box-shadow: 0 0 0 1px var(--fg); transition: left .4s;
+}
+.bn-scale-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 10.5px; color: var(--faint); letter-spacing: .04em; }
+
+/* veredito ao vivo: quando o limite pede atenção, o cartão inverte as cores */
+.bn-verdict { display: flex; flex-direction: column; }
+.bn-label { font-weight: 700; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+.bn-title { font-size: 24px; font-weight: 800; letter-spacing: -.01em; margin: 4px 0 2px; }
+.bn-game { font-size: 12px; color: var(--muted); }
+.bn-advice { margin: 12px 0 0; color: var(--muted); font-size: 12.5px; }
+.bn-verdict.alert { background: var(--fg); border-color: var(--fg); color: var(--ink); }
+.bn-rules { margin-top: auto; padding-top: 14px; font-size: 10.5px; color: var(--faint); }
+.bn-verdict.alert .bn-label, .bn-verdict.alert .bn-game, .bn-verdict.alert .bn-advice, .bn-verdict.alert .bn-rules { color: var(--ink); opacity: .75; }
+
+/* medidores */
+.bn-live { margin-bottom: 12px; }
+.bn-meters { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px 28px; margin-top: 14px; }
+.bn-meter-top { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.bn-meter-top b { font: 500 12.5px var(--mono); color: var(--fg); white-space: nowrap; }
+
+/* sessão */
+.bn-session-head { align-items: flex-start; gap: 14px; }
+.bn-session-head .chips { margin-top: 18px; }
+.bn-session-head .btn { margin-top: 16px; min-width: 150px; }
+.bn-progress { margin-top: 16px; }
+.bn-progress .bar { height: 8px; border-radius: 4px; }
+.bn-progress .bar > i { transition: width 1s linear; }
+.bn-result { margin-top: 14px; padding-top: 16px; border-top: 1px solid var(--line); }
+.bn-result-title { font-size: 20px; font-weight: 800; }
+.bn-summary { margin-top: 10px; }
+.bn-summary .tag { font-size: 11px; padding: 2px 8px; }
+.bn-dist { display: grid; gap: 12px; max-width: 640px; }
+.bn-advice-big { margin: 16px 0 0; font-size: 13px; max-width: 760px; }
+.bn-recs { margin: 0; padding-left: 18px; max-width: 760px; }
+.bn-recs li { margin: 5px 0; color: var(--muted); font-size: 12.5px; }
