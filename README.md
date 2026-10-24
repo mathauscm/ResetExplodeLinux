@@ -31,7 +31,17 @@ app/
   ui/                       HTML/CSS/JS puro (módulos ES, sem bundler nem npm)
 ```
 
-## Rodar
+## Instalar
+
+Baixe o instalador na página de [releases](https://github.com/mathauscm/ResetExplodeLinux/releases/latest):
+
+| Sistema | Arquivo | Como |
+|---|---|---|
+| Qualquer distro (Arch, CachyOS, Manjaro…) | `reset-explode_<versão>_x86_64.AppImage` | marque como executável (`chmod +x`, ou Propriedades → Executável) e abra |
+| Ubuntu, Debian, Mint, Pop!_OS | `reset-explode_<versão>_amd64.deb` | dois cliques, ou `sudo apt install ./reset-explode_<versão>_amd64.deb` |
+| Fedora | `reset-explode-<versão>-1.x86_64.rpm` | dois cliques, ou `sudo dnf install ./reset-explode-<versão>-1.x86_64.rpm` |
+
+## Desenvolver
 
 Dependências (Arch/CachyOS):
 
@@ -48,7 +58,9 @@ cargo test -p reset-core
 Para instalar no seu usuário (aparece no menu de aplicativos, sem sudo): `./install-local.sh`.
 Para atualizar, rode de novo; para remover, `./install-local.sh --remove`.
 
-Para gerar AppImage/deb/rpm: `cargo install tauri-cli --version '^2'` e depois `cargo tauri build` em `app/src-tauri`.
+Para gerar os instaladores de uma release (AppImage, .deb e .rpm, já com o `reset-gpu` dentro, mais o
+`SHA256SUMS`) em `dist/`: `cargo install tauri-cli --version '^2'` uma vez e depois `./scripts/release.sh`. A versão
+vem de `app/src-tauri/tauri.conf.json`.
 
 ## Iluminação RGB
 

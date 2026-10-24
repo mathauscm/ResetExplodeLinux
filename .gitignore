@@ -4,3 +4,7 @@ app/src-tauri/gen/
 
 # worktrees temporárias do Claude Code
 .claude/worktrees/
+
+# release: sidecar copiado e instaladores gerados por scripts/release.sh
+app/src-tauri/binaries/
+dist/

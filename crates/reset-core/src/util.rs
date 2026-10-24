@@ -1,6 +1,16 @@
 use std::fs;
 use std::path::Path;
 
+/// Caminho do app para usar FORA deste processo (atalho de login, pkexec). Dentro de um AppImage o
+/// executável roda de uma montagem temporária (/tmp/.mount_…) que some ao fechar e que o root nem enxerga;
+/// o caminho estável é o do próprio arquivo .AppImage, que o runtime passa em $APPIMAGE.
+pub fn self_exe() -> std::io::Result<std::path::PathBuf> {
+    match std::env::var_os("APPIMAGE").map(std::path::PathBuf::from) {
+        Some(p) if p.is_file() => Ok(p),
+        _ => std::env::current_exe(),
+    }
+}
+
 /// Lê um arquivo de texto do /sys ou /proc e tira espaços/quebra de linha. None se não existe ou está vazio.
 pub fn read_trim(path: impl AsRef<Path>) -> Option<String> {
     let s = fs::read_to_string(path).ok()?;
@@ -53,6 +63,19 @@ mod tests {
         assert_eq!(human_bytes(1536), "1,5 KB");
         assert_eq!(human_bytes(32 * 1024 * 1024 * 1024), "32,0 GB");
         assert_eq!(human_bytes(2 * 1024 * 1024 * 1024 * 1024), "2,0 TB");
+    }
+
+    #[test]
+    fn caminho_estavel_do_appimage() {
+        let f = std::env::temp_dir().join(format!("re-appimage-{}", std::process::id()));
+        std::fs::write(&f, b"").unwrap();
+        std::env::set_var("APPIMAGE", &f);
+        assert_eq!(self_exe().unwrap(), f);
+        // $APPIMAGE apontando para algo que não existe: volta ao executável atual
+        std::env::set_var("APPIMAGE", "/nao/existe.AppImage");
+        assert_eq!(self_exe().unwrap(), std::env::current_exe().unwrap());
+        std::env::remove_var("APPIMAGE");
+        std::fs::remove_file(f).unwrap();
     }
 
     #[test]

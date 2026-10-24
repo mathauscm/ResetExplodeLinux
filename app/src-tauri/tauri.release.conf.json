@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "externalBin": ["binaries/reset-gpu"],
+    "linux": {
+      "deb": { "depends": ["libvulkan1"] },
+      "rpm": { "depends": ["vulkan-loader"] },
+      "appimage": { "bundleMediaFramework": false }
+    }
+  }
+}
