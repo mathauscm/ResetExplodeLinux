@@ -1,0 +1,35 @@
+/* Estilos da tela "Drivers seriais" (prefixo sd-). Só variáveis do tema: funciona no claro e no escuro. */
+.sd-intro { max-width: 980px; margin: -6px 0 16px; line-height: 1.6; }
+.sd-devs { margin-top: 8px; }
+.sd-empty { display: flex; gap: 10px; align-items: flex-start; padding: 18px 14px; border: 1px dashed var(--line-strong); border-radius: 8px; }
+.sd-dev { padding: 10px 0; border-top: 1px solid var(--line); }
+.sd-dev:first-child { border-top: 0; }
+.sd-dev-top { display: flex; gap: 10px; align-items: flex-start; }
+.sd-dev-top .dot { margin-top: 5px; }
+.sd-dev > .sub, .sd-verdict, .sd-dev > .row { margin-left: 19px; }
+.sd-verdict { font-weight: 600; margin-top: 6px; }
+.sd-state { flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.sd-state.ok { color: var(--ok); }
+.sd-state.warn { color: var(--warn); }
+.sd-state.bad { color: var(--bad); }
+.btn.sd-small { padding: 5px 10px; font-size: 10.5px; }
+
+.sd-mods td { vertical-align: top; padding: 7px 10px; }
+.sd-mods th, .sd-mods td:nth-child(3), .sd-mods td:nth-child(4) { white-space: nowrap; }
+.sd-mods td:nth-child(4) .mono { display: block; }
+.sd-board { margin-top: 2px; }
+.sd-mods th:first-child, .sd-mods td:first-child { padding-left: 0; }
+.sd-chips { color: var(--muted); font-size: 12px; }
+.sd-ok { color: var(--ok); font-size: 12px; }
+.sd-bad { color: var(--bad); font-size: 12px; font-weight: 600; }
+
+.sd-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 12px 0 8px; }
+.sd-rule { margin: 4px 0 0; }
+.sd-rule summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+.sd-rule summary:hover { color: var(--fg); }
+.sd-rule pre { margin: 8px 0 0; max-height: 240px; overflow: auto; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; font: 11px/1.55 var(--mono); white-space: pre; user-select: text; }
+
+.sd-opts { margin-top: 10px; display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+.sd-opt { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; }
+.sd-cmd { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 7px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; }
+.sd-cmd code { flex: 1; background: none; padding: 0; }

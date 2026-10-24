@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["crates/reset-core", "crates/reset-gpu", "app/src-tauri"]
+
+[profile.dev.package.reset-core]
+# notas de benchmark e stress fazem sentido também no `cargo run` (debug sem otimização fica ~10x mais lento)
+opt-level = 3
+
+[profile.release]
+lto = true
+codegen-units = 1

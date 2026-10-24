@@ -1,0 +1,69 @@
+/* Overclock: GPU ao vivo, ajustes, verificador de estabilidade, CPU e guia da BIOS. */
+
+.oc-risk {
+  margin: -4px 0 14px; padding: 11px 14px 11px 16px; font-size: 12.5px; line-height: 1.55; color: var(--muted);
+  border: 1px solid var(--line-strong); border-left: 3px solid var(--warn); border-radius: 8px; background: var(--card);
+}
+.oc-risk b { color: var(--warn); }
+
+.oc-top, .oc-mid { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; align-items: start; }
+.oc-mid { margin-top: 12px; grid-template-columns: 1.25fr 1fr; }
+@media (max-width: 1100px) { .oc-top, .oc-mid { grid-template-columns: 1fr; } }
+
+/* ---------------- GPU agora ---------------- */
+.oc-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.oc-tile { padding: 10px 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); min-width: 0; }
+.oc-tile span { display: block; font: 700 10px var(--sans); letter-spacing: .08em; color: var(--faint); text-transform: uppercase; }
+.oc-tile b { display: block; font: 600 21px var(--mono); letter-spacing: -.02em; margin: 3px 0 1px; }
+.oc-tile b u, .oc-sl-val u { text-decoration: none; font-size: 11px; color: var(--muted); margin-left: 3px; font-weight: 500; }
+.oc-tile small { display: block; font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1300px) { .oc-tiles { grid-template-columns: repeat(2, 1fr); } }
+
+/* ---------------- ajustes ---------------- */
+.oc-slider { padding: 10px 0 12px; border-top: 1px solid var(--line); }
+.oc-slider:first-child { border-top: 0; padding-top: 0; }
+.oc-sl-label { font: 700 10.5px var(--sans); letter-spacing: .08em; color: var(--faint); text-transform: uppercase; }
+.oc-sl-val { font: 600 17px var(--mono); }
+.oc-slider input[type="range"] { margin: 8px 0 2px; }
+.oc-ticks { display: flex; justify-content: space-between; font: 10.5px var(--mono); color: var(--faint); }
+.oc-slider.hot .oc-sl-val { color: var(--warn); }
+.oc-slider.hot input[type="range"] { accent-color: var(--warn); }
+.oc-tip { margin: 2px 0 14px; line-height: 1.55; }
+
+/* ---------------- verificador ---------------- */
+.oc-pick { display: grid; grid-template-columns: auto auto; justify-content: start; gap: 0 28px; }
+@media (max-width: 1300px) { .oc-pick { grid-template-columns: 1fr; } }
+#targetHelp { margin: 10px 0 12px; min-height: 18px; }
+#targets .chip:disabled { opacity: .35; cursor: default; }
+.oc-progress { height: 4px; margin-top: 12px; background: var(--hover); border-radius: 2px; overflow: hidden; }
+.oc-progress i { display: block; height: 100%; width: 0; background: var(--fg); transition: width .9s linear; }
+.oc-live:not(:empty) { margin-top: 12px; }
+.oc-live-head { font: 700 10.5px var(--sans); letter-spacing: .08em; color: var(--faint); text-transform: uppercase; margin-bottom: 6px; }
+.oc-cells { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 12px; }
+.oc-cells span { display: block; font-size: 11px; color: var(--muted); }
+.oc-cells b { font: 500 12.5px var(--mono); }
+
+/* veredito: estável = cartão normal; instável = invertido (como no app do Windows) */
+.oc-verdict { margin-top: 14px; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--bg); }
+.oc-verdict p { margin: 8px 0 10px; font-size: 12.5px; }
+.oc-v-title { font: 800 22px var(--sans); letter-spacing: .04em; text-transform: uppercase; }
+.oc-verdict.ok .oc-v-title { color: var(--ok); }
+.oc-verdict.bad { background: var(--fg); border-color: var(--fg); color: var(--ink); }
+.oc-verdict.bad .kv dt { color: var(--ink); opacity: .65; }
+.oc-verdict.bad .kv dd { color: var(--ink); }
+.oc-notes { margin: 0 0 12px; padding-left: 18px; font-size: 12px; line-height: 1.5; }
+.oc-notes li + li { margin-top: 3px; }
+.oc-hist { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 12.5px; min-width: 0; }
+.oc-hist:first-of-type { border-top: 0; }
+.oc-hist .dot { margin-top: 0; }
+.oc-hist > :not(.ellipsis) { white-space: nowrap; flex: none; }
+.oc-mid .stack { display: grid; gap: 12px; }
+.oc-mid .stack > * + * { margin-top: 0; }
+
+/* ---------------- guia ---------------- */
+.oc-steps { display: grid; gap: 0 24px; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); margin-top: 6px; }
+.oc-step { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
+.oc-num {
+  flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--fg); color: var(--ink); font: 700 11.5px var(--mono);
+}

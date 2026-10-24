@@ -1,0 +1,59 @@
+/* Estilos da tela "stress". */
+
+.stress-layout { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 1050px) { .stress-layout { grid-template-columns: 1fr; } }
+
+/* ---------- opções ---------- */
+.comp-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.comp {
+  position: relative; display: block; cursor: pointer;
+  border: 1px solid var(--line-strong); border-radius: 8px; padding: 9px 10px 8px;
+  transition: background .12s, border-color .12s;
+}
+.stress-opts .comp input, .stress-opts .comp input:disabled { position: absolute; opacity: 0; pointer-events: none; }
+.comp b { display: block; font-size: 13px; font-weight: 800; letter-spacing: .04em; }
+.comp small { display: block; color: var(--muted); font-size: 10.5px; margin-top: 1px; }
+.comp:hover { background: var(--hover); }
+.comp.on { background: var(--fg); border-color: var(--fg); color: var(--ink); }
+.comp.on small { color: var(--ink); opacity: .7; }
+.comp.locked { cursor: default; opacity: .7; }
+.comp:has(input:focus-visible) { outline: 2px solid var(--fg); outline-offset: 2px; }
+.lim-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.lim-row input { width: 100%; }
+.lim-row label.field { white-space: nowrap; }
+.stress-opts .chip:disabled { opacity: .35; cursor: default; }
+.stress-opts input:disabled { opacity: .5; }
+.gpu-opts { margin-top: 4px; padding-top: 2px; transition: opacity .15s; }
+.gpu-opts.off { opacity: .45; }
+.stress-hint { font-size: 12.5px; line-height: 1.5; }
+
+/* ---------- números ao vivo ---------- */
+.tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 1250px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; transition: background .2s, color .2s; }
+.tile span { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; color: var(--faint); text-transform: uppercase; }
+.tile b { display: block; font: 600 22px var(--mono); letter-spacing: -.01em; margin: 4px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile small { display: block; color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile.running span::after { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--fg); margin-left: 7px; vertical-align: 1px; animation: stress-pulse 1.2s ease-in-out infinite; }
+/* alerta = cartão invertido, como no app do Windows */
+.tile.alert { background: var(--fg); border-color: var(--fg); color: var(--ink); }
+.tile.alert span, .tile.alert small { color: var(--ink); opacity: .75; }
+.bad-text { color: var(--bad); }
+@keyframes stress-pulse { 50% { opacity: .25; } }
+
+/* ---------- gráfico ---------- */
+.chart-head { margin-bottom: 8px; }
+.chart-head h2 { margin: 0; }
+.legend { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); margin-left: 12px; }
+.legend i { display: inline-block; width: 14px; height: 0; border-top: 2px solid; }
+.lg-cpu { border-color: var(--fg); }
+.lg-gpu { border-color: var(--muted); }
+.lg-lim { border-top-style: dashed !important; border-color: var(--muted); }
+.chart-box { height: 230px; }
+.chart-box canvas { width: 100%; height: 100%; display: block; }
+
+/* ---------- registro ---------- */
+.stress-log { max-height: 210px; overflow: auto; font: 11.5px/1.6 var(--mono); user-select: text; }
+.stress-log > div { padding: 2px 0; border-top: 1px solid var(--line); }
+.stress-log > div:first-child { border-top: 0; }
+.log-bad { color: var(--bad); }
